@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Stockage RSM</title>
+<meta name="theme-color" content="#1f3c88">
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#111;--muted:#6b7280;--accent:#1f3c88;--danger:#b91c1c;--line:#e5e7eb;--ok:#065f46;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Arial;background:var(--bg);color:var(--ink)}
+header{position:sticky;top:0;background:var(--bg);padding:14px 12px 10px;z-index:5;border-bottom:1px solid rgba(0,0,0,.04)}
+h1{margin:0;text-align:center;font-size:18px}
+.wrap{padding:10px 10px 40px;max-width:980px;margin:0 auto}
+.card{background:var(--card);border-radius:12px;padding:14px;margin:12px 0;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.card h2{margin:0 0 8px;font-size:16px}
+label{display:block;font-size:12px;color:var(--muted);margin-top:10px}
+.ex{display:block;color:var(--muted);font-size:12px;margin:2px 0 6px}
+input,select,textarea,button{width:100%;padding:12px;font-size:16px;border:1px solid #d1d5db;border-radius:10px;outline:none;background:#fff}
+textarea{min-height:120px;resize:vertical}
+button{border:none;background:var(--accent);color:#fff;font-weight:800;cursor:pointer}
+button.secondary{background:#111827}
+button.ghost{background:#e5e7eb;color:#111;font-weight:800}
+button.danger{background:var(--danger)}
+.split{display:flex;gap:10px;flex-wrap:wrap}
+.split>div{flex:1 1 260px}
+.btnRow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btnRow button{padding:10px;font-size:14px;border-radius:10px;width:auto;flex:1 1 180px}
+.small{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid var(--line);padding:8px;text-align:center;font-size:13px}
+th{background:#f3f4f6}
+.banner{padding:10px 12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;margin:12px 0}
+.banner.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.hidden{display:none}
+.pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:800}
+.hr{height:1px;background:var(--line);margin:12px 0}
+
+.qrGrid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:12px}
+@media(min-width:720px){.qrGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.qrItem{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;display:grid;grid-template-columns:1fr 170px;gap:10px;align-items:start}
+.qrWrap{width:170px;height:170px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center}
+.qrWrap img{width:100%;height:100%;object-fit:cover;display:block}
+.sideLogo{width:44px;height:44px;object-fit:contain;margin:0 0 6px 0}
+
+/* login */
+.loginOverlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;backdrop-filter:blur(4px)}
+.loginCard{width:min(520px,100%);background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.20)}
+.loginErr{margin-top:10px;color:var(--danger);font-weight:900;font-size:13px;display:none}
+.lockBtn{background:#0f172a !important}
+</style>
+</head>
+<body>
+
+<div id="loginOverlay" class="loginOverlay">
+  <div class="loginCard">
+    <h2 style="margin:0 0 6px">🔒 Accès Stockage RSM</h2>
+    <div class="small" style="margin-bottom:10px">Mot de passe requis</div>
+    <input id="loginPwd" type="password" inputmode="numeric" autocomplete="current-password">
+    <div class="btnRow">
+      <button type="button" class="lockBtn" id="loginBtn">Se connecter</button>
+    </div>
+    <div id="loginErr" class="loginErr">Mot de passe incorrect.</div>
+  </div>
+</div>
+
+<header><h1>📦 Stockage RSM — V1.0 PRODUCTION CLEAN (FORCE + QR OK) • Build 20260115-142250 • Build 20260115-142250</h1></header>
+
+<div class="wrap">
+  <div id="errBanner" class="banner hidden"></div>
+  <div id="okBanner" class="banner ok hidden"></div>
+
+  <div class="card">
+    <h2>📷 Scan QR Code <span class="pill">iPhone</span></h2>
+    <div class="small">Sur iPhone : scanne avec l’app <b>Appareil photo</b>, puis touche la notification.</div>
+  </div>
+
+  <div class="card">
+    <h2>➕ / ➖ Mouvement de stock</h2>
+    <div class="split">
+      <div>
+        <label>Produit</label>
+        <input id="product" list="productsList" autocomplete="off">
+        <datalist id="productsList"></datalist>
+
+        <div class="split">
+          <div><label>Pièces par palette</label><input id="perPalette" type="number" inputmode="numeric"></div>
+          <div><label>Pièces par carton</label><input id="perCarton" type="number" inputmode="numeric"></div>
+        </div>
+
+        <label>Date (JJ/MM/AAAA)</label>
+        <input id="labelDate" type="text" inputmode="numeric">
+      </div>
+
+      <div>
+        <label>Quantité (pièces)</label>
+        <input id="qty" type="number" inputmode="numeric">
+
+        <label>Type</label>
+        <select id="type">
+          <option value="in">Entrée</option>
+          <option value="out">Sortie</option>
+        </select>
+
+        <label>&nbsp;</label>
+        <button type="button" id="btnMove">Valider</button>
+
+        <div class="btnRow">
+          <button type="button" class="ghost" id="btnSaveProd">Enregistrer produit</button>
+          <button type="button" class="secondary" id="btnExportCSV">Exporter CSV</button>
+          <button type="button" class="danger" id="btnReset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <div class="small">Historique (30)</div>
+    <table>
+      <thead><tr><th>Date/Heure</th><th>Type</th><th>Produit</th><th>Qté</th><th>Stock</th></tr></thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>📊 Stock actuel</h2>
+    <table>
+      <thead><tr><th>Produit</th><th>PP</th><th>PC</th><th>Total</th><th>Palettes</th><th>Cartons</th></tr></thead>
+      <tbody id="stockTable"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>🏷️ QR codes + Export A4</h2>
+    <div class="split">
+      <div>
+        <label>Produit</label><input id="qrProduct">
+        <div class="split">
+          <div><label>Pièces/palette</label><input id="qrPerPalette" type="number" inputmode="numeric"></div>
+          <div><label>Pièces/carton</label><input id="qrPerCarton" type="number" inputmode="numeric"></div>
+        </div>
+        <label>Date (JJ/MM/AAAA)</label><input id="qrDate" type="text" inputmode="numeric">
+        <label>Copies</label><input id="qrCopies" type="number" inputmode="numeric" value="1">
+        <button type="button" id="btnGenOne">Générer</button>
+      </div>
+
+      <div>
+        <label>Lot (1 ligne)</label>
+        <div class="small">Produit|PP|PC|Date|Copies</div>
+        <textarea id="bulk"></textarea>
+        <div class="btnRow">
+          <button type="button" class="secondary" id="btnGenAll">Générer tous</button>
+          <button type="button" class="ghost" id="btnClearLabels">Effacer</button>
+          <button type="button" class="secondary" id="btnExportA4">Exporter A4</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="labelsArea" class="qrGrid" style="margin-top:12px"></div>
+  </div>
+<div style="text-align:center;color:#9ca3af;font-size:12px;padding:16px 0">Build 20260115-142250</div>
+</div>
+
+<script src="./qrcode.min.js"></script>
+<script>
+// --- Config
+const PASSWORD="08022021";
+const AUTH_KEY="rsm_auth_ok_v1";
+const KEY="rsm_stock_v1";
+const CATALOG_KEY="rsm_catalog_v1";
+const HISTORY_KEY="rsm_history_v1";
+const LOGO_URL="./rsm_logo.png";
+
+const errBanner=document.getElementById("errBanner");
+const okBanner=document.getElementById("okBanner");
+function showErr(m){errBanner.classList.remove("hidden"); errBanner.innerHTML="<b>Erreur :</b> "+m;}
+function showOk(m){okBanner.classList.remove("hidden"); okBanner.innerHTML="<b>OK :</b> "+m; setTimeout(()=>okBanner.classList.add("hidden"),2200);}
+
+window.addEventListener("error",e=>showErr(e.message||"Erreur JS"));
+window.addEventListener("unhandledrejection",e=>showErr(String(e.reason||"Erreur")));
+
+// --- Login (robuste iOS)
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function bind(){
+    const overlay = $("loginOverlay");
+    const pwd = $("loginPwd");
+    const btn = $("loginBtn");
+    const err = $("loginErr");
+    if(!overlay || !pwd || !btn || !err){ setTimeout(bind, 60); return; }
+
+    function isAuthed(){ try{ return localStorage.getItem(AUTH_KEY)==="1"; }catch(e){ return false; } }
+    function unlock(){ overlay.style.display="none"; try{ localStorage.setItem(AUTH_KEY,"1"); }catch(e){} }
+    function lock(){ overlay.style.display="flex"; try{ localStorage.removeItem(AUTH_KEY); }catch(e){} }
+    function tryLogin(){
+      const v=(pwd.value||"").trim();
+      if(v===PASSWORD){ err.style.display="none"; unlock(); }
+      else { err.style.display="block"; pwd.focus(); pwd.select(); }
+    }
+
+    if(isAuthed()) unlock(); else lock();
+    btn.addEventListener("click", tryLogin);
+    btn.addEventListener("touchend", tryLogin, {passive:true});
+    pwd.addEventListener("keydown", (e)=>{ if(e.key==="Enter") tryLogin(); });
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", bind);
+  else bind();
+})();
+
+// --- Data
+let stock = JSON.parse(localStorage.getItem(KEY) || "{}");
+let catalog = JSON.parse(localStorage.getItem(CATALOG_KEY) || "{}");
+let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+let labelsQueue = [];
+
+function persist(){
+  localStorage.setItem(KEY, JSON.stringify(stock));
+  localStorage.setItem(CATALOG_KEY, JSON.stringify(catalog));
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  refreshDatalist();
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function safeFileName(name){ return (name||"produit").toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_\-]/g,"").slice(0,60)||"produit"; }
+function downloadBlob(blob, filename){ const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),800); }
+function nowISO(){ return new Date().toISOString(); }
+function fmtTS(ts){ try{ return new Date(ts).toLocaleString(); }catch{ return ts; } }
+function todayFR(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear(); }
+
+document.getElementById("labelDate").value=todayFR();
+document.getElementById("qrDate").value=todayFR();
+
+function refreshDatalist(){
+  const dl=document.getElementById("productsList");
+  dl.innerHTML="";
+  Object.keys(catalog).sort().forEach(p=>{ const o=document.createElement("option"); o.value=p; dl.appendChild(o); });
+}
+document.getElementById("product").addEventListener("change", ()=>{
+  const p=document.getElementById("product").value.trim();
+  if(catalog[p]){
+    document.getElementById("perPalette").value=catalog[p].pp||"";
+    document.getElementById("perCarton").value=catalog[p].pc||"";
+  }
+});
+
+function saveProduct(){
+  const p=document.getElementById("product").value.trim();
+  const pp=parseInt(document.getElementById("perPalette").value,10);
+  const pc=parseInt(document.getElementById("perCarton").value,10);
+  if(!p||!pp||!pc) return alert("Produit/PP/PC manquants");
+  catalog[p]={pp,pc};
+  persist();
+  showOk("Produit enregistré");
+}
+
+function moveStock(){
+  const p=document.getElementById("product").value.trim();
+  const pp=parseInt(document.getElementById("perPalette").value,10);
+  const pc=parseInt(document.getElementById("perCarton").value,10);
+  const q=parseInt(document.getElementById("qty").value,10);
+  const t=document.getElementById("type").value;
+  const d=document.getElementById("labelDate").value.trim();
+  if(!p||!pp||!pc||!q) return alert("Champs manquants");
+
+  if(!stock[p]) stock[p]={total:0,pp,pc};
+  stock[p].pp=pp; stock[p].pc=pc;
+  stock[p].total += (t==="in"? q : -q);
+  if(stock[p].total<0) stock[p].total=0;
+
+  catalog[p]={pp,pc};
+  history.unshift({ts:nowISO(), type:t, product:p, qty:q, after:stock[p].total, d});
+  if(history.length>500) history=history.slice(0,500);
+
+  persist(); renderStock(); renderHistory();
+  document.getElementById("qty").value="";
+  showOk("Mouvement enregistré");
+}
+
+function exportCSV(){
+  const headers=["timestamp","type","product","qty","after_stock","label_date"];
+  const lines=[headers.join(",")];
+  for(const h of history){
+    lines.push([JSON.stringify(h.ts),JSON.stringify(h.type),JSON.stringify(h.product),h.qty,h.after,JSON.stringify(h.d||"")].join(","));
+  }
+  downloadBlob(new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"}),"rsm-historique.csv");
+}
+
+function resetAll(){
+  if(!confirm("Tout effacer ?")) return;
+  stock={}; catalog={}; history=[]; labelsQueue=[];
+  localStorage.removeItem(KEY); localStorage.removeItem(CATALOG_KEY); localStorage.removeItem(HISTORY_KEY);
+  document.getElementById("labelsArea").innerHTML="";
+  refreshDatalist(); renderStock(); renderHistory(); showOk("Réinitialisé");
+}
+
+function renderHistory(){
+  const tb=document.getElementById("historyTable"); tb.innerHTML="";
+  if(history.length===0){ tb.innerHTML='<tr><td colspan="5" class="small">Aucun mouvement</td></tr>'; return; }
+  history.slice(0,30).forEach(h=>{
+    const typeLabel = h.type==="in" ? "ENTRÉE" : "SORTIE";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${escapeHtml(fmtTS(h.ts))}</td><td>${escapeHtml(typeLabel)}</td><td>${escapeHtml(h.product)}</td><td>${escapeHtml(h.qty)}</td><td>${escapeHtml(h.after)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function renderStock(){
+  const tb=document.getElementById("stockTable"); tb.innerHTML="";
+  const ps=Object.keys(stock).sort();
+  if(ps.length===0){ tb.innerHTML='<tr><td colspan="6" class="small">Aucun stock</td></tr>'; return; }
+  for(const p of ps){
+    const s=stock[p]; const total=s.total||0; const pp=s.pp||1; const pc=s.pc||1;
+    const pallets=Math.floor(total/pp); const cartons=Math.floor(total/pc);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${escapeHtml(p)}</td><td>${pp}</td><td>${pc}</td><td>${total}</td><td>${pallets}</td><td>${cartons}</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+// --- QR generation (OFFLINE) via local qrcode.js
+function buildPayload(o){ return JSON.stringify({p:o.p, pp:o.pp, pc:o.pc, d:o.d||""}); }
+
+function makeQRDataUrl(payload){
+  const tmp=document.createElement("div");
+  // High error correction, 600x600 for printing
+  new QRCode(tmp, {text: payload, width: 600, height: 600, correctLevel: QRCode.CorrectLevel.H});
+  const canvas = tmp.querySelector("canvas");
+  const img = tmp.querySelector("img");
+  if(canvas) return canvas.toDataURL("image/png");
+  if(img) return img.src;
+  return "";
+}
+
+function addLabel(o){
+  const payload=buildPayload(o);
+  const dataUrl=makeQRDataUrl(payload);
+  if(!dataUrl){ showErr("Génération QR impossible."); return; }
+
+  labelsQueue.push({product:o.p, pp:o.pp, pc:o.pc, date:o.d||"", qrData:dataUrl});
+
+  const box=document.createElement("div"); box.className="qrItem";
+  box.innerHTML=`
+    <div>
+      <img class="sideLogo" src="${LOGO_URL}" alt="RSM">
+      <div style="font-weight:900;margin-bottom:6px">${escapeHtml(o.p)}</div>
+      <div class="small">Palette: <b>${escapeHtml(o.pp)}</b> • Carton: <b>${escapeHtml(o.pc)}</b></div>
+      <div class="small">Date: <b>${escapeHtml(o.d||"-")}</b></div>
+      <div class="btnRow"><button type="button" class="secondary">Télécharger QR</button></div>
+    </div>
+    <div class="qrWrap"><img alt="QR" src="${dataUrl}"></div>
+  `;
+  const b1=box.querySelector("button");
+  b1.onclick=()=>{
+    // download png
+    const a=document.createElement("a");
+    a.href=dataUrl;
+    a.download=safeFileName(o.p)+"_QR.png";
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  document.getElementById("labelsArea").prepend(box);
+}
+
+function genOne(){
+  const p=document.getElementById("qrProduct").value.trim();
+  const pp=parseInt(document.getElementById("qrPerPalette").value,10);
+  const pc=parseInt(document.getElementById("qrPerCarton").value,10);
+  const d=document.getElementById("qrDate").value.trim();
+  const copies=Math.max(1, parseInt(document.getElementById("qrCopies").value,10)||1);
+  if(!p||!pp||!pc) return alert("Produit/PP/PC manquants");
+  catalog[p]={pp,pc}; persist();
+  for(let i=0;i<copies;i++) addLabel({p,pp,pc,d});
+  showOk(copies+" étiquette(s)");
+}
+
+function genAll(){
+  const raw=(document.getElementById("bulk").value||"");
+  const lines=raw.split("\n").map(x=>x.trim()).filter(Boolean);
+  if(lines.length===0) return alert("Aucune ligne");
+  let count=0, bad=0;
+  for(const line of lines){
+    const parts=line.split("|");
+    const p=(parts[0]||"").trim();
+    const pp=parseInt(parts[1]||"",10);
+    const pc=parseInt(parts[2]||"",10);
+    const d=(parts[3]||"").trim();
+    const copies=Math.max(1, parseInt(parts[4]||"1",10)||1);
+    if(!p||!pp||!pc){ bad++; continue; }
+    catalog[p]={pp,pc};
+    for(let i=0;i<copies;i++){ addLabel({p,pp,pc,d}); count++; }
+  }
+  persist();
+  if(count===0) alert("Aucune ligne valide");
+  else showOk(count+" généré(s)"+(bad?(" • "+bad+" ignorée(s)"):""));
+}
+
+function clearLabels(){ labelsQueue=[]; document.getElementById("labelsArea").innerHTML=""; }
+
+function exportA4(){
+  if(labelsQueue.length===0) return alert("Aucune étiquette");
+  const labels=labelsQueue.slice();
+  const w=window.open("","_blank");
+  w.document.open();
+  w.document.write(buildPrintHtml(labels));
+  w.document.close();
+}
+
+function buildPrintHtml(labels){
+  const css=`
+<style>
+@page{size:A4;margin:10mm}
+body{font-family:Arial;margin:0}
+.toolbar{position:sticky;top:0;background:#fff;padding:10px;border-bottom:1px solid #ddd}
+.page{page-break-after:always}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:33mm;gap:3mm}
+.label{border:1px solid #ddd;border-radius:6px;padding:2mm;display:grid;grid-template-columns:1fr 20mm;grid-template-rows:auto auto auto auto;gap:1mm 2mm;align-items:center;overflow:hidden}
+.rsm{font-weight:900;font-size:12px;grid-column:1;display:flex;align-items:center;gap:6px}
+.logo{width:10mm;height:10mm;object-fit:contain}
+.meta{font-size:9px;grid-column:1}
+.qrWrap{width:20mm;height:20mm;border:1px solid #eee;border-radius:4px;overflow:hidden;background:#fff;grid-column:2;grid-row:1/span 4;justify-self:end}
+.qrWrap img{width:20mm;height:20mm;object-fit:cover;display:block}
+@media print{.toolbar{display:none}}
+</style>`;
+  const pages=[]; for(let i=0;i<labels.length;i+=24) pages.push(labels.slice(i,i+24));
+  const body=pages.map(page=>{
+    const cells=page.map(l=>`
+      <div class="label">
+        <div class="rsm"><img class="logo" src="${LOGO_URL}" alt="RSM">RSM</div>
+        <div class="meta"><b>${escapeHtml(l.product)}</b></div>
+        <div class="meta">Palette: <b>${l.pp}</b> • Carton: <b>${l.pc}</b></div>
+        <div class="meta">Date: <b>${escapeHtml(l.date||"-")}</b></div>
+        <div class="qrWrap"><img src="${l.qrData}" alt="QR"></div>
+      </div>
+    `).join("");
+    const blanks=Array(Math.max(0,24-page.length)).fill('<div class="label" style="border:1px dashed #eee"></div>').join("");
+    return `<div class="page"><div class="grid">${cells}${blanks}</div></div>`;
+  }).join("");
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Export A4</title>${css}</head>
+  <body><div class="toolbar"><button onclick="window.print()">Imprimer / PDF</button></div>${body}</body></html>`;
+}
+
+// --- QR scanner deep link support: if opened with ?data=... fill form
+(function(){
+  const params=new URLSearchParams(location.search);
+  const data=params.get("data");
+  if(!data) return;
+  try{
+    const o=JSON.parse(data);
+    if(o.p) document.getElementById("product").value=o.p;
+    if(o.pp) document.getElementById("perPalette").value=o.pp;
+    if(o.pc) document.getElementById("perCarton").value=o.pc;
+    if(o.d) document.getElementById("labelDate").value=o.d;
+    showOk("QR chargé");
+  }catch(e){}
+})();
+
+// Wire buttons
+document.getElementById("btnMove").addEventListener("click", moveStock);
+document.getElementById("btnSaveProd").addEventListener("click", saveProduct);
+document.getElementById("btnExportCSV").addEventListener("click", exportCSV);
+document.getElementById("btnReset").addEventListener("click", resetAll);
+document.getElementById("btnGenOne").addEventListener("click", genOne);
+document.getElementById("btnGenAll").addEventListener("click", genAll);
+document.getElementById("btnClearLabels").addEventListener("click", clearLabels);
+document.getElementById("btnExportA4").addEventListener("click", exportA4);
+
+// Init
+refreshDatalist(); renderStock(); renderHistory(); persist();
+</script>
+</body>
+</html>
